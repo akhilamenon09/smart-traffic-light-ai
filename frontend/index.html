@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Traffic AI</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #101827;
+      color: #f1f5f9;
+      padding: 24px;
+    }
+    main { max-width: 900px; margin: auto; }
+    h1 { color: #67e8f9; }
+    .subtitle { color: #aab8cc; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 14px;
+      border: 1px solid #334155;
+    }
+    input {
+      width: 100%;
+      margin: 14px 0;
+      accent-color: #67e8f9;
+    }
+    .number { font-size: 28px; font-weight: bold; }
+    .badge { font-weight: bold; }
+    .traffic-light {
+      background: #080d16;
+      padding: 14px;
+      border-radius: 14px;
+      width: 90px;
+      margin: 18px auto;
+    }
+    .lamp {
+      width: 48px;
+      height: 48px;
+      margin: 9px auto;
+      border-radius: 50%;
+      background: #303846;
+    }
+    .red.on { background: #ff4545; box-shadow: 0 0 18px #ff4545; }
+    .yellow.on { background: #ffd43b; box-shadow: 0 0 18px #ffd43b; }
+    .green.on { background: #36e58c; box-shadow: 0 0 18px #36e58c; }
+    button {
+      background: #0891b2;
+      color: white;
+      border: 0;
+      padding: 12px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover { background: #0e7490; }
+    .status { color: #67e8f9; }
+    footer { color: #94a3b8; margin-top: 28px; font-size: 13px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>🚦 Smart Traffic AI</h1>
+  <p class="subtitle">AI-assisted traffic prediction and Verilog signal control</p>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Road A</h2>
+      <label for="roadA">Vehicles waiting</label>
+      <input id="roadA" type="range" min="0" max="30" value="20">
+      <p class="number"><span id="countA">20</span> vehicles</p>
+      <p>Traffic: <span id="densityA" class="badge">High</span></p>
+      <p>Recommended green: <span id="timeA">30</span> seconds</p>
+    </section>
+
+    <section class="card">
+      <h2>Road B</h2>
+      <label for="roadB">Vehicles waiting</label>
+      <input id="roadB" type="range" min="0" max="30" value="5">
+      <p class="number"><span id="countB">5</span> vehicles</p>
+      <p>Traffic: <span id="densityB" class="badge">Low</span></p>
+      <p>Recommended green: <span id="timeB">10</span> seconds</p>
+    </section>
+
+    <section class="card">
+      <h2>Traffic signal</h2>
+      <div class="traffic-light">
+        <div id="red" class="lamp red on"></div>
+        <div id="yellow" class="lamp yellow"></div>
+        <div id="green" class="lamp green"></div>
+      </div>
+      <p class="status" id="signal">Road A: RED</p>
+      <p id="timer">Press Start to begin.</p>
+      <button id="start">Start simulation</button>
+      <button id="stop">Stop</button>
+    </section>
+  </div>
+
+  <footer>
+    Educational simulation only. Not intended to control real traffic signals.
+  </footer>
+</main>
+
+<script>
+  const roadA = document.getElementById("roadA");
+  const roadB = document.getElementById("roadB");
+  let running = false;
+  let phase = 0;
+  let elapsed = 0;
+  let lastTick = Date.now();
+
+  function getTraffic(count) {
+    if (count <= 5) return "Low";
+    if (count <= 15) return "Medium";
+    return "High";
+  }
+
+  function getGreenTime(count) {
+    return Math.round(10 + (count / 30) * 20);
+  }
+
+  function updateRoad(letter, input) {
+    const count = Number(input.value);
+    document.getElementById("count" + letter).textContent = count;
+    document.getElementById("density" + letter).textContent = getTraffic(count);
+    document.getElementById("time" + letter).textContent = getGreenTime(count);
+  }
+
+  function renderSignal() {
+    ["red", "yellow", "green"].forEach(id => {
+      document.getElementById(id).classList.remove("on");
+    });
+
+    const road = phase < 3 ? "A" : "B";
+    const light = phase === 1 || phase === 4
+      ? "yellow"
+      : phase === 0 || phase === 3 ? "green" : "red";
+
+    document.getElementById(light).classList.add("on");
+    document.getElementById("signal").textContent =
+      "Road " + road + ": " + light.toUpperCase();
+  }
+
+  function tick() {
+    if (!running) return;
+
+    const now = Date.now();
+    elapsed += (now - lastTick) / 1000;
+    lastTick = now;
+
+    const a = Number(roadA.value);
+    const b = Number(roadB.value);
+    const greenA = getGreenTime(a);
+    const greenB = getGreenTime(b);
+
+    const durations = [greenA, 3, 2, greenB, 3, 2];
+    if (elapsed >= durations[phase]) {
+      elapsed = 0;
+      phase = (phase + 1) % durations.length;
+      renderSignal();
+    }
+
+    document.getElementById("timer").textContent =
+      "Phase time: " + Math.floor(elapsed) + " seconds";
+    requestAnimationFrame(tick);
+  }
+
+  roadA.addEventListener("input", () => updateRoad("A", roadA));
+  roadB.addEventListener("input", () => updateRoad("B", roadB));
+
+  document.getElementById("start").addEventListener("click", () => {
+    if (running) return;
+    running = true;
+    lastTick = Date.now();
+    renderSignal();
+    tick();
+  });
+
+  document.getElementById("stop").addEventListener("click", () => {
+    running = false;
+    document.getElementById("timer").textContent = "Simulation stopped.";
+  });
+
+  updateRoad("A", roadA);
+  updateRoad("B", roadB);
+</script>
+</body>
+</html>
